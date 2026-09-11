@@ -1,0 +1,36 @@
+import { test, expect } from '@playwright/test';
+import { networkInterfaces } from 'node:os';
+
+test('creation works over non-secure LAN HTTP without randomUUID', async ({ page }) => {
+ const address = Object.values(networkInterfaces()).flat().find(x => x && x.family === 'IPv4' && !x.internal)?.address;
+ test.skip(!address, 'No LAN interface available');
+ const errors: string[] = [];
+ page.on('pageerror', e => errors.push(e.message));
+ await page.goto(`http://${address}:5173`);
+ expect(await page.evaluate(() => isSecureContext)).toBe(false);
+ expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe('undefined');
+ await page.getByRole('button', {name:'کار جدید', exact:true}).click();
+ await page.getByLabel('عنوان کار', {exact:true}).fill('کار شبکه');
+ await page.getByRole('button', {name:'ذخیره کار',exact:true}).click();
+ await expect(page.locator('.task-title').first()).toHaveText('کار شبکه');
+ await page.keyboard.press('n');
+ await page.locator('.note-title-input').fill('یادداشت شبکه');
+ await page.locator('.rich-editor').fill('ذخیره متن در HTTP شبکه');
+ await expect(page.locator('.save-status')).toContainText('ذخیره شد');
+ await page.getByRole('button',{name:'بستن',exact:true}).first().click();
+ await page.getByRole('button',{name:'دسته جدید',exact:true}).first().click();
+ await page.getByLabel('نام دسته').fill('دسته شبکه');
+ await page.getByRole('button',{name:'ذخیره دسته',exact:true}).click();
+ await expect(page.locator('.category-nav')).toContainText('دسته شبکه');
+ await page.locator('.sidebar nav').getByRole('button',{name:'عادت‌ها',exact:true}).click();
+ await page.getByRole('button',{name:'عادت جدید',exact:true}).click();
+ await page.getByLabel('نام عادت').fill('مطالعه در شبکه');
+ await page.getByRole('button',{name:'ذخیره عادت',exact:true}).click();
+ await expect(page.locator('.habit-name')).toContainText('مطالعه در شبکه');
+ await page.reload();
+ await expect(page.locator('.task-title').first()).toHaveText('کار شبکه');
+ await page.locator('.sidebar nav').getByRole('button',{name:'یادداشت‌ها',exact:true}).click();
+ await page.locator('.note-card').first().click();
+ await expect(page.locator('.rich-editor')).toHaveText('ذخیره متن در HTTP شبکه');
+ expect(errors).toEqual([]);
+});
